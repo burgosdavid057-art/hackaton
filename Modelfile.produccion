@@ -1,0 +1,32 @@
+# Modelo del Copiloto de Produccion.
+#
+#   ollama create copiloto-produccion -f Modelfile.produccion
+#
+# --- Por que un Modelfile y no `options` en la llamada ---
+#
+# El endpoint /v1/chat/completions de Ollama IGNORA `options`,
+# `chat_template_kwargs` y `think`. Se probaron los tres contra 0.31.1 y el
+# modelo siguio cargando con 4096 en las tres (probe_ollama.py deja la medicion).
+# Lo unico que mueve la ventana es hornearla aqui.
+#
+# Con 4096 este extractor no funciona "un poco peor": no funciona. El prompt
+# (45 causas + 26 estaciones + el reporte) ocupa ~2200 tokens; lo que sobra se
+# lo come la respuesta y el turno termina sin JSON.
+#
+# --- Por que un modelo de 3B y no el de 9B ---
+#
+# qwen3.5:9b y gemma4 razonan antes de responder. Medido en este M5: >5 minutos
+# por reporte, por encima del timeout de 300 s de extraer.py, y el cliente
+# reintenta hasta agotar. El extractor no necesita razonar: convierte texto
+# sucio en filas y nada mas. qwen2.5:3b hace ese trabajo en ~35 s.
+#
+# Que se equivoque es parte del diseno, no un accidente: sumo tres paradas de la
+# remachadora en una de 53 min y le puso L1 a un reporte de L2. Para eso estan
+# verificar_literalidad (marca el 53, que no aparece en el documento) y la cola
+# de revision. Un extractor perfecto haria innecesario el producto.
+#
+# Si algun dia hay GPU con mas cabeza, subir de modelo aqui es cambiar una linea
+# —pero sube tambien TIMEOUT_S en produccion/extraer.py.
+FROM qwen2.5:3b
+PARAMETER num_ctx 8192
+PARAMETER temperature 0

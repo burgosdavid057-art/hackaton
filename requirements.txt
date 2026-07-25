@@ -16,3 +16,13 @@ streamlit>=1.40.0
 pillow>=10.0.0
 # Canal WhatsApp (webhook)
 flask>=3.0.0
+
+# --- Copiloto de Produccion (produccion/) ---
+# Toda la aritmetica de herramientas.py. El LLM no calcula: esto si.
+pandas>=2.0.0
+# Motor de .xlsx para pandas.read_excel en ingest.a_texto
+openpyxl>=3.1.0
+# PDF con tablas: extract_text() solo pierde la correspondencia fila-columna
+pdfplumber>=0.11.0
+# taxonomia.yaml: 4 lineas, 26 estaciones, 45 causas con alias
+PyYAML>=6.0
