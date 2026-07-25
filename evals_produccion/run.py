@@ -690,7 +690,12 @@ def medir_recurrencia(mods, mapas: dict) -> dict:
 
     grupos = r.get("datos") or []
     if isinstance(grupos, dict):
-        grupos = grupos.get("grupos") or grupos.get("causas") or []
+        # "recurrentes" primero: es la clave que devuelve causas_recurrentes
+        # (herramientas.py:809). Sin ella el eval de la R-02 falla siempre, y
+        # falla diciendo "no aparecio PAR-MEC-02" — que suena a que el patron no
+        # se detecto, cuando en realidad si se detecto y nadie lo leyo.
+        grupos = (grupos.get("recurrentes") or grupos.get("grupos")
+                  or grupos.get("causas") or [])
 
     encontrado, repeticiones, minutos = None, None, None
     for g in grupos:

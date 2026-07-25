@@ -50,7 +50,6 @@ EXTENSIONES = (".txt", ".md")
 _cliente = None
 _colecciones: dict[str, object] = {}
 _ultimo_motivo: str | None = None
-_cache_valores: dict[tuple, tuple] = {}
 
 
 # --- Normalizacion y utilidades ---------------------------------------------
@@ -305,16 +304,15 @@ def _valores_distintos(col, clave: str) -> tuple:
     """Valores distintos de una clave de metadata, para reconciliar lo que pide
     el usuario con lo que de verdad hay indexado.
 
-    Se cachea por (coleccion, clave, count): si el conteo cambia, se recalcula.
-    A escala de turnos de planta esto son miles de filas, no millones.
+    Sin cache a proposito. Se cacheaba por (coleccion, clave, count), y ese
+    conteo no cambia en el flujo mas normal del producto: el supervisor corrige
+    una causa en la pestana Revisar, se reprocesa el archivo, indexar_observaciones
+    borra y reinserta las MISMAS observaciones del turno. Mismo count, cache
+    intacto, valores viejos. A partir de ahi la busqueda contesta "no hay
+    observaciones de la linea L4" con los datos de L4 ahi mismo. Un falso
+    negativo silencioso es peor que una consulta lenta: medido, el cache ahorra
+    9 ms sobre 5000 pasajes.
     """
-    try:
-        n = col.count()
-    except Exception:
-        return ()
-    firma = (col.name, clave, n)
-    if firma in _cache_valores:
-        return _cache_valores[firma]
     try:
         metas = (col.get(include=["metadatas"]) or {}).get("metadatas") or []
     except Exception:
@@ -324,8 +322,7 @@ def _valores_distintos(col, clave: str) -> tuple:
         v = (meta or {}).get(clave)
         if isinstance(v, str) and v and v not in vistos:
             vistos.append(v)
-    _cache_valores[firma] = tuple(vistos)
-    return _cache_valores[firma]
+    return tuple(vistos)
 
 
 def _resolver(pedido: str, valores: tuple, es_linea: bool = False) -> list[str]:
@@ -507,7 +504,11 @@ def indexar_procedimientos(carpeta: Path | None = None) -> int:
         try:
             vectores = _embeber([p["texto"] for p in pasajes], "RETRIEVAL_DOCUMENT")
             col.add(
-                ids=[f"{ruta.stem}#{j}" for j in range(len(pasajes))],
+                # ruta.name y no ruta.stem: con el stem, "bomba.txt" y "bomba.md"
+                # generan los mismos ids y col.add NO lanza — se queda con el
+                # documento viejo y descarta el nuevo en silencio, mientras la
+                # funcion sigue reportando que lo indexo.
+                ids=[f"{ruta.name}#{j}" for j in range(len(pasajes))],
                 embeddings=vectores,
                 documents=[p["texto"] for p in pasajes],
                 metadatas=[
