@@ -31,6 +31,7 @@ import copy
 import json
 import re
 import unicodedata
+from collections import Counter
 from difflib import SequenceMatcher
 from functools import lru_cache
 from typing import Any, NamedTuple
@@ -402,6 +403,58 @@ def normalizar_estacion(texto: str | None, linea: str | None = None) -> int | No
     return None
 
 
+def _lineas_donde_existe(texto_estacion: str) -> set[int]:
+    """Lineas en las que esa estacion existe, resolviendola contra cada una."""
+    _, por_numero = _catalogo_lineas()
+    return {
+        lid for numero, lid in por_numero.items()
+        if normalizar_estacion(texto_estacion, str(numero)) is not None
+    }
+
+
+def _linea_por_estaciones(turno: dict, linea_id: int | None) -> int | None:
+    """Linea que explican las estaciones nombradas, si contradice a la del modelo.
+
+    Existe por un caso real: el reporte de WhatsApp del 20/07 nunca dice de que
+    linea es —solo el nombre del archivo lo dice—, el extractor puso "L1", y
+    "Remachado" solo existe en L2. Resultado: estacion_id None, la causa cae por
+    similitud en "falla de sensor" (el texto menciona un sensor sucio), y las
+    cinco paradas de la remachadora quedan repartidas entre dos lineas. El
+    patron que el producto existe para detectar se vuelve invisible.
+
+    Solo votan las estaciones que existen en UNA sola linea. "Empaque" esta en
+    las cuatro y no dice nada; "Remachado" solo en L2 y por eso pesa. Un empate
+    no elige: es preferible dejar la linea del modelo y que el supervisor lo vea
+    en la cola, a cambiarla por una adivinanza.
+
+    Cuenta votos y compara. No llama al modelo: si hubiera que preguntarle al
+    LLM cual linea es, estariamos usandolo para decidir un dato, que es
+    justamente lo que este proyecto no hace.
+    """
+    votos: Counter = Counter()
+    for clave in ("paradas", "scrap", "calidad"):
+        for fila in turno.get(clave) or []:
+            if not isinstance(fila, dict):
+                continue
+            texto = str(fila.get("estacion") or "").strip()
+            if not texto:
+                continue
+            posibles = _lineas_donde_existe(texto)
+            if len(posibles) == 1:
+                votos[next(iter(posibles))] += 1
+
+    if not votos:
+        return None
+    orden = votos.most_common()
+    ganadora, n = orden[0]
+    if len(orden) > 1 and orden[1][1] == n:
+        return None
+    # La del modelo explica lo mismo o mas: no hay contradiccion que corregir.
+    if linea_id is not None and votos.get(linea_id, 0) >= n:
+        return None
+    return ganadora
+
+
 def normalizar_linea(texto: str | None) -> int | None:
     """'L2', 'l2', 'linea 2', 'LINEA 2', '2', 'Línea 2 - Lavadoras' -> id de L2."""
     texto_norm = _norm(texto)
@@ -481,6 +534,21 @@ def normalizar(datos: dict) -> dict:
         linea_texto = turno.get("linea")
         turno["linea_id"] = normalizar_linea(linea_texto)
 
+        # Las estaciones que nombro el reporte mandan sobre la linea que dijo el
+        # modelo: son un dato del documento, no una inferencia suya.
+        corregida = _linea_por_estaciones(turno, turno["linea_id"])
+        if corregida is not None:
+            turno["linea_id"] = corregida
+            turno["linea_corregida_por_estaciones"] = True
+            # Desde aqui la linea de referencia es la corregida: si se siguiera
+            # usando el texto del modelo, normalizar_estacion volveria a buscar
+            # en la linea equivocada y dejaria estacion_id en None.
+            _, por_numero = _catalogo_lineas()
+            linea_texto = next(
+                (str(num) for num, lid in por_numero.items() if lid == corregida),
+                linea_texto,
+            )
+
         for tipo, clave in (("parada", "paradas"), ("scrap", "scrap")):
             for fila in turno.get(clave) or []:
                 if not isinstance(fila, dict):
@@ -516,5 +584,74 @@ def normalizar(datos: dict) -> dict:
             if causa_id is None:
                 sin_clasificar += 1
 
+    resultado["turnos"] = _consolidar(resultado.get("turnos") or [])
     resultado["sin_clasificar"] = sin_clasificar
     return resultado
+
+
+# Listas de hechos de un turno. Al fusionar dos objetos del mismo turno se
+# concatenan; el resto de campos se toma del primero que los traiga.
+_LISTAS_TURNO = ("paradas", "scrap", "calidad", "observaciones", "campos_no_literales")
+
+
+def _clave_turno(turno: dict) -> tuple:
+    """La misma clave por la que la DB considera que dos turnos son el mismo.
+
+    Tiene que empatar con el UNIQUE (fecha, turno, linea_id) de esquema.sql: si
+    aqui se agrupara por otra cosa, se consolidarian turnos que la base habria
+    guardado por separado, o al reves.
+    """
+    return (turno.get("fecha"), turno.get("turno"), turno.get("linea_id"))
+
+
+def _consolidar(turnos: list) -> list:
+    """Funde los objetos que son el MISMO turno (misma fecha, turno y linea).
+
+    Existe por un caso real: un CSV export con nueve filas de detalle de un solo
+    turno, del que el extractor devolvio SIETE turnos —uno por fila—. Cada uno
+    se guardo aparte y `turnos_encontrados` paso de 1 a 7, que es la cifra con
+    la que despues se calcula la cobertura ("esto es sobre 12 de 15 turnos").
+    Inflarla es peor que un numero equivocado: le da al supervisor una confianza
+    que no corresponde.
+
+    Se consolida aqui, en Python, y no pidiendoselo al modelo: agrupar y contar
+    es trabajo de Python (README.md, "La decision que organiza todo"). El LLM ya
+    demostro que ante repeticiones prefiere sumar, y sumar es justo lo que
+    destruye la senal de recurrencia.
+
+    Las filas de detalle NO se deduplican entre si: tres paradas iguales de la
+    misma maquina son tres paradas, y esa repeticion es exactamente lo que el
+    producto existe para detectar.
+
+    Los turnos sin fecha no se agrupan: ahi la clave es (None, None, None) para
+    todos y fundiria turnos que no tienen nada que ver. Van tal cual y que
+    guardar_turno decida.
+    """
+    fundidos: dict[tuple, dict] = {}
+    salida: list = []
+    for turno in turnos:
+        if not isinstance(turno, dict):
+            continue
+        clave = _clave_turno(turno)
+        if clave[0] is None:
+            salida.append(turno)
+            continue
+        previo = fundidos.get(clave)
+        if previo is None:
+            fundidos[clave] = turno
+            salida.append(turno)
+            continue
+        for campo in _LISTAS_TURNO:
+            extra = turno.get(campo)
+            if isinstance(extra, list) and extra:
+                previo.setdefault(campo, [])
+                if isinstance(previo[campo], list):
+                    previo[campo].extend(extra)
+        # Un escalar que el primer objeto no traia (el plan quedo en la fila 1 y
+        # el producido en la fila 2) se recupera del siguiente que si lo tenga.
+        for campo, valor in turno.items():
+            if campo in _LISTAS_TURNO or valor is None:
+                continue
+            if previo.get(campo) is None:
+                previo[campo] = valor
+    return salida

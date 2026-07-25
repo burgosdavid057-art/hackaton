@@ -395,6 +395,41 @@ def _nombre_linea(turno: dict, mapa: dict[int, str]) -> str:
     return str(turno.get("linea") or "").strip()
 
 
+def _fecha_iso(valor) -> str | None:
+    """'YYYY-MM-DD' real, o None. "lunes 20" no es una fecha; "2026-13-45" tampoco."""
+    m = re.search(r"\d{4}-\d{2}-\d{2}", str(valor or ""))
+    if not m:
+        return None
+    try:
+        return dt.date.fromisoformat(m.group(0)).isoformat()
+    except ValueError:
+        return None
+
+
+def _fecha_del_nombre(turno: dict, ruta: Path) -> None:
+    """Rellena la fecha del turno desde el nombre del archivo, si falta.
+
+    El reporte de WhatsApp dice "lunes 20" y nada mas: el extractor hace bien en
+    dejar `fecha` en null, porque inventar el mes y el ano seria exactamente lo
+    que el prompt le prohibe. Pero el archivo se llama
+    turno_2026-07-20_L2_whatsapp.txt, o sea que el dato SI esta — solo que en el
+    nombre y no en el cuerpo.
+
+    Sin esto, db.guardar_turno rechaza el turno y el reporte se pierde entero.
+    Perder un turno de planta por eso es peor que usar el nombre del archivo, que
+    es justamente donde la planta pone la fecha cuando exporta.
+
+    Solo rellena lo que falta: si el extractor encontro una fecha en el texto,
+    esa manda. El texto es el documento; el nombre es apenas la etiqueta.
+    """
+    if _fecha_iso(turno.get("fecha")):
+        return
+    del_nombre = _fecha_iso(ruta.name)
+    if del_nombre:
+        turno["fecha"] = del_nombre
+        turno["fecha_desde_nombre"] = True
+
+
 def _observaciones(turno: dict) -> list[str]:
     """Texto libre del turno, limpio y sin entradas vacias."""
     obs = turno.get("observaciones")
@@ -549,6 +584,7 @@ def procesar(ruta: Path) -> dict:
         avisos: list[str] = []
 
         for i, turno in enumerate(turnos, 1):
+            _fecha_del_nombre(turno, ruta)
             try:
                 turno_id = db.guardar_turno(documento_id, turno)
             except Exception as e:  # noqa: BLE001
