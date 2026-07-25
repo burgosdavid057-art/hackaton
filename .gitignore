@@ -34,3 +34,16 @@ data/eval_produccion.db
 # El .gitkeep mantiene la carpeta en el repo, el contenido no.
 produccion/inbox/*
 !produccion/inbox/.gitkeep
+
+# WhatsApp bot (open-wa)
+whatsapp-bot/node_modules/
+whatsapp-bot/qr.png
+whatsapp-bot/.wwebjs_auth/
+whatsapp-bot/_IGNORE_*/
+whatsapp-bot/session*.data.json
+
+# managed
+**.data.json
+**.node-persist**
+**_IGNORE_**
+# end managed

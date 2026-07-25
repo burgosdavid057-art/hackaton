@@ -22,7 +22,9 @@ ESPECIFICACIONES = [
         "parametros": {
             "consulta": ("string", "que busca el usuario, en sus palabras"),
             "categoria": ("string", "Neveras, Lavadoras, Congeladores"),
-            "litros_min": ("number", "capacidad minima en litros"),
+            "litros_aprox": ("number", "capacidad aproximada deseada, ej. 'de 400 litros' -> 400"),
+            "litros_min": ("number", "capacidad MINIMA: 'mas de 400', 'al menos 400'"),
+            "litros_max": ("number", "capacidad MAXIMA: 'menos de 400', 'hasta 400', 'pequena'"),
             "precio_max": ("number", "presupuesto maximo en pesos"),
         },
         "requeridos": ["consulta"],

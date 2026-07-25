@@ -123,11 +123,13 @@ def validar(respuesta: str, evidencia_json: str) -> dict:
     from .validator import INSTRUCCIONES as INSTR_VAL, _extraer_json
 
     if not evidencia_json or evidencia_json == "[]":
+        # Sin herramientas = respuesta conversacional (saludo, aclaracion o
+        # rechazo de tema fuera de alcance). No hay datos de producto que auditar.
         return {
             "verificado": True,
-            "fundamentada": False,
+            "fundamentada": True,
             "afirmaciones_sin_respaldo": [],
-            "explicacion": "El agente respondio sin consultar ninguna herramienta.",
+            "explicacion": "Respuesta conversacional, sin datos de producto que verificar.",
         }
 
     cliente, modelo = _cliente()

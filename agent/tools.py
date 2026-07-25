@@ -30,27 +30,34 @@ def buscar_productos(
     consulta: str = "",
     categoria: str | None = None,
     litros_min: float | None = None,
+    litros_max: float | None = None,
+    litros_aprox: float | None = None,
     precio_max: float | None = None,
 ) -> dict:
-    """Busca productos en el catalogo real de Haceb."""
-    encontrados = catalog.buscar(consulta, categoria, litros_min, precio_max)
+    """Busca y filtra productos en el catalogo real de Haceb."""
+    encontrados = catalog.buscar(
+        consulta, categoria, litros_min, litros_max, litros_aprox, precio_max
+    )
     respuesta = {
         "encontrado": bool(encontrados),
         "cantidad": len(encontrados),
         "productos": [catalog.resumen(p) for p in encontrados],
         "fuente": "catalogo publico de Haceb (API VTEX)",
     }
-    # Si pidieron una capacidad que no existe, decirlo con el maximo real, para
-    # que el agente responda "no hay de X litros, la mayor es Y" en vez de
-    # "no existe el producto".
-    if litros_min and encontrados:
-        capacidades = [c for c in (catalog.litros_de(p) for p in encontrados) if c]
-        mayor = max(capacidades) if capacidades else None
-        if mayor is not None and mayor < litros_min:
+
+    # Si se pidio una capacidad concreta, aclarar si el resultado no la cumple
+    # exacta, con la capacidad REAL mas cercana. Asi el agente ofrece el producto
+    # real (con su referencia y litros exactos) en vez de inventar una cifra.
+    objetivo = litros_aprox or litros_min or litros_max
+    if objetivo and encontrados:
+        caps = [c for c in (catalog.litros_de(p) for p in encontrados) if c]
+        if caps and objetivo not in caps:
+            mas_cercana = min(caps, key=lambda c: abs(c - objetivo))
             respuesta["nota"] = (
-                f"No hay productos de {litros_min:.0f} litros o mas. El de mayor "
-                f"capacidad que encontre es de {mayor:.0f} litros. Estos son los "
-                f"mas cercanos; ofrécelos en vez de decir que no existe."
+                f"No hay una nevera de exactamente {objetivo:.0f} litros. La de "
+                f"capacidad mas cercana es de {mas_cercana:.0f} litros. Ofrece esa "
+                f"(usa su referencia y litros EXACTOS de la lista); NO inventes "
+                f"una capacidad ni una referencia que no este aqui."
             )
     return respuesta
 

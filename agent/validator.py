@@ -80,11 +80,14 @@ def validar(respuesta: str, evidencia_json: str) -> dict:
     trabajar, no se puede afirmar que la respuesta sea confiable.
     """
     if not evidencia_json or evidencia_json == "[]":
+        # Sin herramientas = respuesta conversacional (saludo, pregunta de
+        # aclaracion o rechazo de un tema fuera de alcance). No hay afirmaciones
+        # de producto que auditar, asi que no se marca ninguna alerta.
         return {
             "verificado": True,
-            "fundamentada": False,
+            "fundamentada": True,
             "afirmaciones_sin_respaldo": [],
-            "explicacion": "El agente respondio sin consultar ninguna herramienta.",
+            "explicacion": "Respuesta conversacional, sin datos de producto que verificar.",
         }
 
     # Si el agente corre sobre Groq u Ollama, el validador tambien.

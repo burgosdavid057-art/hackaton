@@ -48,18 +48,22 @@ def buscar(
     consulta: str = "",
     categoria: str | None = None,
     litros_min: float | None = None,
+    litros_max: float | None = None,
+    litros_aprox: float | None = None,
     precio_max: float | None = None,
     limite: int = 6,
 ) -> list[dict]:
-    """Busqueda por palabras sobre nombre, descripcion y especificaciones.
+    """Busca y FILTRA productos por texto, categoria, precio y capacidad.
 
-    litros_min es un filtro SUAVE: si ningun producto alcanza esa capacidad, en
-    vez de devolver vacio (que llevaria al agente a decir "no existe"), devuelve
-    los de mayor capacidad para que pueda responder "no hay de X litros, la
-    mayor es Y". El cliente busca por nombre y tamaño, no por referencia exacta.
+    Capacidad (todos SUAVES: si nada calza exacto, devuelve lo mas cercano, para
+    que el agente pueda decir "no hay de X, lo mas cercano es Y" en vez de
+    "no existe"):
+      - litros_aprox: capacidad deseada aproximada ("de 400 litros") -> ordena
+        por cercania a ese valor.
+      - litros_min: capacidad minima ("mas de 400", "al menos 400").
+      - litros_max: capacidad maxima ("menos de 400", "hasta 400").
     """
     terminos = [t for t in re.split(r"\W+", normaliza(consulta)) if len(t) > 2]
-    # Palabras genericas que no deben, por si solas, filtrar el catalogo.
     genericas = {"nevera", "neveras", "lavadora", "lavadoras", "congelador",
                  "congeladores", "electrodomestico", "litros", "litro"}
     utiles = [t for t in terminos if t not in genericas]
@@ -70,11 +74,9 @@ def buscar(
             continue
         if precio_max and (p["precio"] or 0) > precio_max:
             continue
-
         heno = normaliza(
             p["nombre"] + " " + p["descripcion"] + " " + " ".join(p["specs"].values())
         )
-        # Puntaje: los terminos utiles pesan; los genericos solo desempatan.
         puntaje = sum(2 for t in utiles if t in heno)
         puntaje += sum(1 for t in terminos if t in genericas and t in heno)
         if terminos and puntaje == 0:
@@ -84,24 +86,52 @@ def buscar(
     if not candidatos:
         return []
 
-    if litros_min:
-        cumplen = [c for c in candidatos if c[1] is not None and c[1] >= litros_min]
-        if cumplen:
-            cumplen.sort(key=lambda x: (-x[0], -(x[1] or 0)))
-            return [c[2] for c in cumplen[:limite]]
-        # Nadie alcanza la capacidad pedida: devolver los mas grandes.
-        candidatos.sort(key=lambda x: (-(x[1] or 0), -x[0]))
-        return [c[2] for c in candidatos[:limite]]
+    con_litros = [c for c in candidatos if c[1] is not None]
 
+    # 1) Capacidad aproximada: ordenar por cercania al valor deseado.
+    if litros_aprox is not None and con_litros:
+        con_litros.sort(key=lambda c: (abs(c[1] - litros_aprox), -c[0]))
+        return [c[2] for c in con_litros[:limite]]
+
+    # 2) Rango [min, max]: filtro suave.
+    if (litros_min is not None or litros_max is not None) and con_litros:
+        def en_rango(v):
+            if litros_min is not None and v < litros_min:
+                return False
+            if litros_max is not None and v > litros_max:
+                return False
+            return True
+
+        dentro = [c for c in con_litros if en_rango(c[1])]
+        if dentro:
+            dentro.sort(key=lambda x: (-x[0], -(x[1] or 0)))
+            return [c[2] for c in dentro[:limite]]
+        # Nada en el rango: devolver lo mas cercano al limite pedido.
+        objetivo = litros_min if litros_min is not None else litros_max
+        con_litros.sort(key=lambda c: (abs(c[1] - objetivo), -c[0]))
+        return [c[2] for c in con_litros[:limite]]
+
+    # 3) Sin criterio de capacidad: por relevancia de texto.
     candidatos.sort(key=lambda x: (-x[0], -(x[2]["precio"] or 0)))
     return [c[2] for c in candidatos[:limite]]
 
 
 def litros_de(p: dict) -> float | None:
-    """Capacidad en litros de un producto, si esta publicada."""
+    """Capacidad en litros que el CLIENTE reconoce.
+
+    El numero que el cliente conoce y pregunta es el del NOMBRE del producto
+    (capacidad bruta / de marketing): "Nevera ... 404 Litros ...". Se prefiere
+    ese; si no, la capacidad bruta y luego la neta de las especificaciones. Asi,
+    si el cliente pide "404 litros", encuentra la nevera que Haceb vende como de
+    404 litros, aunque su capacidad neta publicada sea otra.
+    """
+    m = re.search(r"(\d{2,4})\s*(?:litros|lts|l\b)", normaliza(p.get("nombre", "")))
+    if m:
+        return float(m.group(1))
+
     litros = (
-        p["specs"].get("Capacidad neta en litros")
-        or p["specs"].get("Capacidad bruta En Litros")
+        p["specs"].get("Capacidad bruta En Litros")
+        or p["specs"].get("Capacidad neta en litros")
         or p["specs"].get("Capacidad de lavado")
     )
     if not litros:

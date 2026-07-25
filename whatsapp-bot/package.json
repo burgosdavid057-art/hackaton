@@ -1,0 +1,8 @@
+{
+  "name": "haceb-whatsapp-bot",
+  "version": "1.0.0",
+  "description": "Puente open-wa <-> agente Haceb",
+  "type": "commonjs",
+  "scripts": { "start": "node bot.js" },
+  "dependencies": { "@open-wa/wa-automate": "^4.72.0" }
+}
