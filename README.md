@@ -11,6 +11,13 @@ Todo fundamentado en el **catálogo público real de Haceb** y en los **manuales
 
 ---
 
+> **¿Buscas el Copiloto de Producción?** Es el otro agente de este repo: uso
+> interno, para planta, con su propia app. Va aparte porque tiene otra audiencia
+> y otras herramientas, y comparte con este el motor de Ollama y el validador.
+> Documentación en [produccion/README.md](produccion/README.md).
+
+---
+
 ## La idea
 
 El proyecto obvio para una marca de electrodomésticos es un asistente de compra: un chatbot sobre el catálogo. Ese agente resuelve el minuto en que alguien decide comprar, e ignora los diez años siguientes.

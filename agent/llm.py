@@ -208,12 +208,30 @@ def embed(contents, config=None):
     )
 
 
+def modelo_embed() -> str:
+    """Nombre del embedder activo. Lo usa el RAG para etiquetar sus indices.
+
+    Importa porque los indices NO son intercambiables entre embedders: bge-m3
+    da 1024 dimensiones y gemini-embedding-001 da 768. Comparar vectores de dos
+    modelos distintos no lanza ningun error, solo devuelve similitudes sin
+    sentido — el peor tipo de falla, porque se ve igual que una que funciona.
+    """
+    load_dotenv()
+    if proveedor() == "ollama":
+        return os.environ.get("OLLAMA_EMBED_MODEL", "nomic-embed-text").strip()
+    return MODELO_EMBED
+
+
 def embed_textos(textos, tipo: str = "RETRIEVAL_DOCUMENT") -> list[list[float]]:
     """Vectoriza con el proveedor de embeddings activo.
 
     Si el agente corre sobre Ollama, los embeddings tambien son locales
-    (nomic-embed-text por defecto): RAG 100% en la maquina, sin cuota ni nube.
-    Si no, usa Gemini. Ambos devuelven vectores de 768 dimensiones.
+    (bge-m3 o nomic-embed-text): RAG 100% en la maquina, sin cuota ni nube.
+    Si no, usa Gemini.
+
+    La dimension DEPENDE del modelo (bge-m3: 1024, nomic-embed-text: 768,
+    gemini-embedding-001: 768 por configuracion). Quien guarde estos vectores
+    tiene que anotar con que modelo los produjo.
     """
     load_dotenv()
     textos = list(textos)

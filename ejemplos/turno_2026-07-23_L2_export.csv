@@ -1,0 +1,10 @@
+fecha,turno,linea,estacion,tipo,descripcion,minutos,unidades,kg,operario
+2026-07-23,2,L2,,PRODUCCION,Plan 480 / Real 402,480,402,,J. Marulanda
+2026-07-23,2,L2,Remachado,PARADA,"R-02 atascada otra vez, se destrabo manual",32,,,
+2026-07-23,2,L2,Remachado,PARADA,"R-02 se volvio a trabar, llamamos mantenimiento",41,,,
+2026-07-23,2,L2,Panel de control,PARADA,"Tablero maquina 4 no responde, se reinicio",15,,,
+2026-07-23,2,L2,Ensamble de tina,PARADA,"Falto material, no llego canastilla de tinas",28,,,
+2026-07-23,2,L2,Remachado,SCRAP,"Remaches mal puestos por el atasco",,18,,
+2026-07-23,2,L2,Conformado de gabinete,SCRAP,"Lamina golpeada",,4,,
+2026-07-23,2,L2,Prueba funcional,SCRAP,"Ruido raro en el ciclo, se envio a revision",,,,
+2026-07-23,2,L2,,NOTA,"El alimentador de la R-02 sigue desalineado. Van 3 turnos esta semana con lo mismo. Mantenimiento dice que hay que cambiar una guia pero no hay repuesto.",,,,

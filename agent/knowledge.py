@@ -135,8 +135,6 @@ def _ranking(pregunta: str, manual_file: str, k: int) -> list[tuple[float, dict]
 # embeddings cierran esa brecha. Se combinan ambos: BM25 acierta en referencias
 # y codigos exactos, los embeddings en sintomas descritos con otras palabras.
 
-MODELO_EMBED = "gemini-embedding-001"
-DIM_EMBED = 768
 INDICE_DIR = RAIZ / "data" / "index"
 
 
@@ -190,11 +188,17 @@ def construir_indice(manual_file: str, forzar: bool = False) -> int:
     if destino.exists() and not forzar:
         return len(pasajes)
 
+    from . import llm
+
     vectores = embeber([p["texto"] for p in pasajes], "RETRIEVAL_DOCUMENT", verboso=True)
     INDICE_DIR.mkdir(parents=True, exist_ok=True)
+    # Se anota el embedder REAL que produjo estos vectores, no una constante.
+    # Sin esto no hay forma de saber si un indice en disco es comparable con el
+    # modelo que esta activo hoy.
     destino.write_text(
         json.dumps(
-            {"modelo": MODELO_EMBED, "dim": DIM_EMBED,
+            {"modelo": llm.modelo_embed(),
+             "dim": len(vectores[0]) if vectores else 0,
              "vectores": [[round(x, 5) for x in _normalizar(v)] for v in vectores]},
             ensure_ascii=False,
         ),
@@ -203,13 +207,40 @@ def construir_indice(manual_file: str, forzar: bool = False) -> int:
     return len(pasajes)
 
 
+_AVISADOS: set[str] = set()
+
+
 @lru_cache(maxsize=32)
 def _vectores(manual_file: str) -> tuple:
+    """Vectores precomputados del manual, SOLO si los produjo el embedder activo.
+
+    Un indice construido con otro modelo no sirve: las dimensiones pueden ni
+    coincidir, y si coinciden por casualidad las similitudes salen sin sentido.
+    Nada de eso lanza una excepcion, asi que hay que atajarlo aqui: si el
+    indice no corresponde, se ignora y la busqueda cae a BM25 sola. Degradar es
+    aceptable; comparar vectores incompatibles en silencio no.
+    """
     import json
+
+    from . import llm
+
     ruta = _ruta_indice(manual_file)
     if not ruta.exists():
         return ()
     datos = json.loads(ruta.read_text(encoding="utf-8"))
+
+    construido_con = datos.get("modelo")
+    activo = llm.modelo_embed()
+    if construido_con != activo:
+        if manual_file not in _AVISADOS:
+            _AVISADOS.add(manual_file)
+            print(
+                f"  aviso: el indice de {Path(manual_file).name} se construyo con "
+                f"'{construido_con}' y el embedder activo es '{activo}'. Se ignora "
+                f"y se usa solo BM25. Reconstruye con: python build_index.py"
+            )
+        return ()
+
     return tuple(tuple(v) for v in datos["vectores"])
 
 

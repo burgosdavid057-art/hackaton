@@ -1,0 +1,360 @@
+# Taxonomía de planta — Copiloto de Producción HACEB
+#
+# Inventada para arrancar sin bloquear el desarrollo. Es plausible para una
+# planta de línea blanca, pero no es la de HACEB: cuando alguien de planta la
+# revise, lo que hay que cambiar son los `alias`, no los nombres.
+#
+# Los alias son la parte que de verdad trabaja. El nombre canónico lo lee el
+# gerente en el resumen; el alias es lo que el supervisor escribe a las 2 a.m.
+# ("se trabó", "no llegó material", "R-02"). El fuzzy match acierta o falla ahí.
+#
+# 25 causas de parada · 15 de scrap · 5 de calidad. Ese tamaño es deliberado:
+# con menos, todo cae en "otros"; con más, la misma parada se registra distinto
+# según quién escriba y la recurrencia se diluye hasta volverse invisible.
+
+lineas:
+  - nombre: L1
+    producto: Neveras
+    estaciones:
+      - {nombre: Conformado de lámina,      alias: [conformado, prensa, troqueladora, troquel]}
+      - {nombre: Ensamble de gabinete,      alias: [gabinete, armado de gabinete]}
+      - {nombre: Inyección de poliuretano,  alias: [poliuretano, PU, espuma, inyeccion, molde]}
+      - {nombre: Circuito de refrigeración, alias: [circuito, refrigeracion, serpentin, condensador]}
+      - {nombre: Carga de gas,              alias: [carga de gas, gas, refrigerante, R600]}
+      - {nombre: Ensamble final,            alias: [ensamble final, final, acabado]}
+      - {nombre: Prueba funcional,          alias: [prueba, banco de prueba, test, funcional]}
+      - {nombre: Empaque,                   alias: [empaque, embalaje, encajado]}
+
+  - nombre: L2
+    producto: Lavadoras
+    estaciones:
+      - {nombre: Conformado de gabinete,    alias: [conformado, prensa, lamina]}
+      - {nombre: Remachado,                 alias: [remachadora, remach, R-02, remaches]}
+      - {nombre: Ensamble de tina,          alias: [tina, tanque, canasta]}
+      - {nombre: Montaje de transmisión,    alias: [transmision, motor, moto-reductor, polea]}
+      - {nombre: Panel de control,          alias: [panel, tarjeta, control, display]}
+      - {nombre: Prueba funcional,          alias: [prueba, banco, ciclo de prueba]}
+      - {nombre: Empaque,                   alias: [empaque, embalaje]}
+
+  - nombre: L3
+    producto: Estufas y cocinas
+    estaciones:
+      - {nombre: Conformado,                alias: [conformado, prensa, corte]}
+      - {nombre: Porcelanizado,             alias: [porcelanizado, esmalte, esmaltado, horno de esmalte]}
+      - {nombre: Ensamble de quemadores,    alias: [quemadores, mecheros, parrilla]}
+      - {nombre: Montaje de horno,          alias: [horno, cavidad]}
+      - {nombre: Prueba de estanqueidad,    alias: [estanqueidad, prueba de gas, fugas, hermeticidad]}
+      - {nombre: Empaque,                   alias: [empaque, embalaje]}
+
+  - nombre: L4
+    producto: Congeladores horizontales
+    estaciones:
+      - {nombre: Conformado de lámina,      alias: [conformado, prensa]}
+      - {nombre: Inyección de poliuretano,  alias: [poliuretano, PU, espuma]}
+      - {nombre: Circuito de refrigeración, alias: [circuito, refrigeracion]}
+      - {nombre: Ensamble final,            alias: [ensamble, final]}
+      - {nombre: Empaque,                   alias: [empaque]}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CAUSAS DE PARADA (25)
+# ─────────────────────────────────────────────────────────────────────────────
+causas:
+  # ── Material y abastecimiento ──────────────────────────────────────────────
+  - codigo: PAR-MAT-01
+    tipo: parada
+    categoria: material
+    nombre: Falta de material en línea
+    alias: [sin material, falto material, no llego material, desabasto, sin insumo,
+            no hay pieza, esperando material, falta componente]
+
+  - codigo: PAR-MAT-02
+    tipo: parada
+    categoria: material
+    nombre: Material no conforme de proveedor
+    alias: [material malo, lamina defectuosa, componente malo, no conforme,
+            material fuera de medida, llego mal el material]
+
+  - codigo: PAR-MAT-03
+    tipo: parada
+    categoria: material
+    nombre: Error de surtido o material equivocado
+    alias: [material equivocado, surtido mal, pieza cambiada, referencia equivocada,
+            mandaron otra pieza]
+
+  - codigo: PAR-LOG-01
+    tipo: parada
+    categoria: material
+    nombre: Espera de logística interna
+    alias: [montacargas, espera logistica, no hay estiba, no llego la estiba,
+            estiba, sin canastilla, esperando el montacargas, no vino a recoger]
+
+  # ── Cambio de referencia y ajuste ──────────────────────────────────────────
+  - codigo: PAR-SET-01
+    tipo: parada
+    categoria: setup
+    nombre: Cambio de referencia
+    alias: [cambio de referencia, setup, cambio de modelo, montaje, cambio de producto,
+            cambio de programa]
+
+  - codigo: PAR-SET-02
+    tipo: parada
+    categoria: setup
+    nombre: Ajuste de parámetros de proceso
+    alias: [ajuste, calibracion, ajuste de parametros, nivelacion, puesta a punto]
+
+  - codigo: PAR-SET-03
+    tipo: parada
+    categoria: setup
+    nombre: Espera de liberación de primera pieza
+    alias: [liberacion, primera pieza, esperando calidad, aprobacion de muestra,
+            visto bueno]
+
+  # ── Mecánica ───────────────────────────────────────────────────────────────
+  - codigo: PAR-MEC-01
+    tipo: parada
+    categoria: mecanica
+    nombre: Falla mecánica de equipo
+    alias: [falla mecanica, se daño la maquina, se rompio, dañada, falla de equipo,
+            se partio, quedo mala]
+
+  - codigo: PAR-MEC-02
+    tipo: parada
+    categoria: mecanica
+    nombre: Atasco de producto
+    alias: [atasco, se trabo, atascado, atascada, se atoro, producto atorado,
+            trancado, trancada, se volvio a trabar, destrabar]
+
+  - codigo: PAR-MEC-03
+    tipo: parada
+    categoria: mecanica
+    nombre: Falla de transportador
+    alias: [banda, cadena, transportador, conveyor, se salio la banda, se rompio la cadena]
+
+  - codigo: PAR-MEC-04
+    tipo: parada
+    categoria: mecanica
+    nombre: Falla de robot o manipulador
+    alias: [robot, manipulador, brazo, se desconfiguro el robot]
+
+  - codigo: PAR-HER-01
+    tipo: parada
+    categoria: mecanica
+    nombre: Cambio o falla de herramental
+    alias: [herramienta, herramental, dado, matriz, punzon, se partio el punzon,
+            cambio de dado, desgaste de herramienta]
+
+  # ── Eléctrica y control ────────────────────────────────────────────────────
+  - codigo: PAR-ELE-01
+    tipo: parada
+    categoria: electrica
+    nombre: Falla eléctrica de equipo
+    alias: [falla electrica, se quemo, corto, breaker, contactor, motor quemado]
+
+  - codigo: PAR-ELE-02
+    tipo: parada
+    categoria: electrica
+    nombre: Falla de sensor o fotocelda
+    alias: [sensor, fotocelda, no detecta, sensor sucio, encoder, final de carrera]
+
+  - codigo: PAR-ELE-03
+    tipo: parada
+    categoria: electrica
+    nombre: Falla de PLC o HMI
+    alias: [PLC, HMI, pantalla, tablero, se colgo, se reinicio, error en pantalla,
+            no responde el tablero]
+
+  # ── Servicios industriales ─────────────────────────────────────────────────
+  - codigo: PAR-SER-01
+    tipo: parada
+    categoria: servicios
+    nombre: Falla de aire comprimido
+    alias: [aire comprimido, sin aire, compresor, presion de aire, se cayo el aire]
+
+  - codigo: PAR-SER-02
+    tipo: parada
+    categoria: servicios
+    nombre: Corte o fluctuación de energía
+    alias: [se fue la luz, energia, corte de energia, bajon, apagon, fluctuacion]
+
+  - codigo: PAR-SER-03
+    tipo: parada
+    categoria: servicios
+    nombre: Falla de vapor, agua o gas de proceso
+    alias: [vapor, agua, caldera, gas de proceso, sin agua, presion de gas]
+
+  # ── Calidad ────────────────────────────────────────────────────────────────
+  - codigo: PAR-CAL-01
+    tipo: parada
+    categoria: calidad
+    nombre: Paro por ajuste de calidad
+    alias: [ajuste de calidad, paro por calidad, correccion, reproceso en linea]
+
+  - codigo: PAR-CAL-02
+    tipo: parada
+    categoria: calidad
+    nombre: Retención o bloqueo de lote
+    alias: [retencion, lote retenido, bloqueo de calidad, cuarentena, lote bloqueado]
+
+  # ── Personal ───────────────────────────────────────────────────────────────
+  - codigo: PAR-PER-01
+    tipo: parada
+    categoria: personal
+    nombre: Falta de personal
+    alias: [falta personal, ausentismo, sin operario, incapacidad, no llego el operario]
+
+  - codigo: PAR-PER-02
+    tipo: parada
+    categoria: personal
+    nombre: Capacitación o entrenamiento en línea
+    alias: [capacitacion, entrenamiento, induccion, charla, operario nuevo]
+
+  - codigo: PAR-PER-03
+    tipo: parada
+    categoria: personal
+    nombre: Incidente de seguridad
+    alias: [incidente, accidente, seguridad, casi accidente, evacuacion, simulacro]
+
+  # ── Programado ─────────────────────────────────────────────────────────────
+  - codigo: PAR-MTO-01
+    tipo: parada
+    categoria: programado
+    nombre: Mantenimiento preventivo programado
+    alias: [mantenimiento programado, preventivo, MP, rutina de mantenimiento]
+
+  - codigo: PAR-PRG-01
+    tipo: parada
+    categoria: programado
+    nombre: Paro programado
+    alias: [aseo, reunion, fin de programa, almuerzo, cambio de turno, 5S,
+            no habia programa]
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # CAUSAS DE SCRAP (15)
+  # ───────────────────────────────────────────────────────────────────────────
+  - codigo: SCR-LAM-01
+    tipo: scrap
+    categoria: material
+    nombre: Lámina rayada o golpeada
+    alias: [rayado, rayon, golpe, abollado, maltratado, machucado, golpeada]
+
+  - codigo: SCR-LAM-02
+    tipo: scrap
+    categoria: proceso
+    nombre: Conformado fuera de tolerancia
+    alias: [fuera de medida, mal conformado, doblez, medida mala, no da la medida,
+            fuera de tolerancia]
+
+  - codigo: SCR-PU-01
+    tipo: scrap
+    categoria: proceso
+    nombre: Falla de inyección de poliuretano
+    alias: [poliuretano, PU, mala inyeccion, burbuja, vacio, falto espuma,
+            no lleno, sopladura]
+
+  - codigo: SCR-PU-02
+    tipo: scrap
+    categoria: proceso
+    nombre: Deformación por desmolde
+    alias: [desmolde, deformado, pandeado, se abombo, se deformo]
+
+  - codigo: SCR-SOL-01
+    tipo: scrap
+    categoria: proceso
+    nombre: Defecto de soldadura
+    alias: [soldadura, suelda, punto frio, porosidad, mala suelda, despegado]
+
+  - codigo: SCR-PIN-01
+    tipo: scrap
+    categoria: proceso
+    nombre: Defecto de pintura
+    alias: [pintura, chorreado, descascarado, piel de naranja, mal pintado, cascara]
+
+  - codigo: SCR-ESM-01
+    tipo: scrap
+    categoria: proceso
+    nombre: Defecto de porcelanizado
+    alias: [esmalte, porcelanizado, crater, desprendimiento, burbuja de esmalte,
+            se salto el esmalte]
+
+  - codigo: SCR-ENS-01
+    tipo: scrap
+    categoria: proceso
+    nombre: Error de ensamble
+    alias: [mal ensamblado, mal armado, pieza cambiada, mal montado, invertido,
+            mal puesto, mal puestos, remaches mal, mal remachado]
+
+  - codigo: SCR-FUG-01
+    tipo: scrap
+    categoria: proceso
+    nombre: Fuga en circuito de refrigeración
+    alias: [fuga, fuga de gas, circuito, se fugo, perdida de gas, no sella]
+
+  - codigo: SCR-GAS-01
+    tipo: scrap
+    categoria: proceso
+    nombre: Carga de gas fuera de especificación
+    alias: [carga de gas, gas bajo, sobrecarga, fuera de spec, mala carga]
+
+  - codigo: SCR-ELE-01
+    tipo: scrap
+    categoria: proceso
+    nombre: Falla eléctrica en prueba funcional
+    alias: [no enciende, falla electrica, no arranca, no prende, tarjeta mala]
+
+  - codigo: SCR-PRV-01
+    tipo: scrap
+    categoria: material
+    nombre: Componente defectuoso de proveedor
+    alias: [proveedor, componente malo, pieza mala, vino defectuoso, no conforme proveedor]
+
+  - codigo: SCR-MAN-01
+    tipo: scrap
+    categoria: manipulacion
+    nombre: Daño por manipulación o transporte interno
+    alias: [se cayo, manipulacion, transporte, montacargas lo golpeo, daño en traslado]
+
+  - codigo: SCR-EMP-01
+    tipo: scrap
+    categoria: manipulacion
+    nombre: Daño en empaque
+    alias: [empaque, caja rota, icopor, daño de empaque, mal encajado]
+
+  - codigo: SCR-ARR-01
+    tipo: scrap
+    categoria: proceso
+    nombre: Producto de arranque o ajuste
+    alias: [arranque, ajuste, primeras piezas, calentamiento, purga, muestra]
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # DEFECTOS DE CALIDAD (5) — detectados después, en auditoría o cliente
+  # ───────────────────────────────────────────────────────────────────────────
+  - codigo: CAL-EST-01
+    tipo: calidad
+    categoria: funcional
+    nombre: No conformidad de estanqueidad
+    alias: [estanqueidad, fuga, no sella, hermeticidad, prueba de fuga]
+
+  - codigo: CAL-RUI-01
+    tipo: calidad
+    categoria: funcional
+    nombre: Ruido anormal en operación
+    alias: [ruido, suena raro, vibracion, hace bulla, zumbido]
+
+  - codigo: CAL-TEM-01
+    tipo: calidad
+    categoria: funcional
+    nombre: Temperatura fuera de rango
+    alias: [temperatura, no enfria, enfria poco, no da la temperatura, sobrecalienta]
+
+  - codigo: CAL-EXT-01
+    tipo: calidad
+    categoria: estetico
+    nombre: Defecto estético en auditoría
+    alias: [estetico, apariencia, acabado, rayon, mancha, defecto visual]
+
+  - codigo: CAL-FUN-01
+    tipo: calidad
+    categoria: funcional
+    nombre: Falla funcional en producto terminado
+    alias: [no funciona, falla funcional, no arranca, auditoria de producto,
+            fallo en PT]

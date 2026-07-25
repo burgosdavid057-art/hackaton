@@ -9,6 +9,14 @@
 data/index/
 data/chroma/
 
+# Base del Copiloto de Producción: se regenera con produccion/db.py
+# (inicializar() + reprocesar el inbox). Contiene datos de planta, no va al repo.
+# Los archivos -wal y -shm son del journal WAL que abre db.conectar().
+data/produccion.db
+data/produccion.db-wal
+data/produccion.db-shm
+data/chroma_produccion/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -19,3 +27,10 @@ venv/
 *.log
 _run_*.py
 evals/resultados.json
+evals_produccion/resultados.json
+data/eval_produccion.db
+
+# Reportes de turno que suelte el supervisor: son datos internos de planta.
+# El .gitkeep mantiene la carpeta en el repo, el contenido no.
+produccion/inbox/*
+!produccion/inbox/.gitkeep

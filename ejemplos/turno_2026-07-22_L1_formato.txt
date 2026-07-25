@@ -1,0 +1,34 @@
+================================================
+REPORTE DE PRODUCCION - LINEA 1 (NEVERAS)
+Fecha: 22/07/2026        Turno: 1        Sup: M. Restrepo
+================================================
+
+PRODUCCION
+  Programado ................ 320
+  Producido ................. 296
+  Minutos de turno .......... 480
+
+PARADAS
+  Hora    Estacion              Motivo                        Min
+  ------  --------------------  ----------------------------  ----
+  07:15   Inyeccion PU          Ajuste temperatura de molde     35
+  09:50   Carga de gas          Sin aire comprimido             18
+  13:20   Conformado            Cambio de referencia            45
+  14:40   Inyeccion PU          Ajuste temperatura de molde     22
+
+SCRAP
+  Estacion              Causa                          Und    Kg
+  --------------------  -----------------------------  -----  ------
+  Inyeccion PU          Burbuja en puerta                 14    58.0
+  Ensamble final        Rayado                             5    21.0
+  Prueba funcional      No enfria                          2     8.5
+
+OBSERVACIONES
+  Tercera semana con el mismo problema de burbuja en las puertas despues del
+  cambio de proveedor de poliol. El molde 3 es el que mas saca. Ya se ajusto
+  temperatura dos veces en el turno y sigue saliendo. Se necesita revision de
+  fondo, esto no lo arregla el operario.
+
+  El compresor de aire volvio a caerse a media manana, es el mismo de la
+  semana pasada.
+================================================

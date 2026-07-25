@@ -1,5 +1,9 @@
 # Modelo (capa gratuita, sin tarjeta): texto, function calling, visión y embeddings
 google-genai>=1.0.0
+# Cliente del protocolo OpenAI: lo usa agent/openai_backend.py para hablarle a
+# Ollama y a Groq. Sin esto, el camino local (el único que sirve en planta) ni
+# siquiera importa.
+openai>=1.40.0
 # Carga de .env
 python-dotenv>=1.0.0
 # Extracción de manuales en PDF
