@@ -84,6 +84,169 @@ st.set_page_config(
 )
 
 
+# --- Design system: los tres estados de un dato -------------------------------
+#
+# Del bundle de Claude Design (_ds/modernist-07ecfa1c). Los colores base y las
+# esquinas viven en .streamlit/config.toml; aqui va solo lo que el tema nativo no
+# puede expresar.
+#
+# La regla visual del producto es una sola y no admite excepciones: en pantalla,
+# un numero se ve distinto segun de donde salio.
+#
+#   VERIFICADO      esta escrito en el documento          subrayado 2px
+#   DUDOSO          lo produjo el modelo, no el documento rayado + borde acento + ≈
+#   SIN CLASIFICAR  causa que no cuadro con el catalogo   borde punteado
+#
+# Por eso el rojo de acento NO se usa para nada mas. Si se gasta en un boton
+# bonito, deja de significar "esto no lo puedo respaldar" y el supervisor pierde
+# la unica senal que le dice que mirar. Las tres clases se generan desde
+# `dato()`, nunca escribiendo el span a mano.
+
+VARS_TEMA = {
+    "light": """
+      --dsm-text:#201e1d; --dsm-bg:#f3f2f2; --dsm-surface:#eae9e9;
+      --dsm-divider:#9e9d9d; --dsm-neutral-600:#7d7979; --dsm-neutral-700:#605d5d;
+      --dsm-accent:#ec3013; --dsm-accent-100:#fff2ef; --dsm-accent-200:#ffe0d9;
+      --dsm-accent-fuerte:#ae1800;
+    """,
+    "dark": """
+      --dsm-text:#f4f2f1; --dsm-bg:#171615; --dsm-surface:#242221;
+      --dsm-divider:#6b6a69; --dsm-neutral-600:#9b9797; --dsm-neutral-700:#bab6b6;
+      --dsm-accent:#ff563c; --dsm-accent-100:#3a1a12; --dsm-accent-200:#4d2018;
+      --dsm-accent-fuerte:#ff9783;
+    """,
+}
+
+CSS = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap');
+
+:root { %(vars)s }
+
+/* Las tres marcas de procedencia de un dato. */
+.dato-ok {
+  font-family:'Archivo',system-ui,sans-serif; font-weight:800;
+  border-bottom:2px solid var(--dsm-text); white-space:nowrap;
+}
+.dato-dudoso {
+  font-family:'Archivo',system-ui,sans-serif; font-weight:800;
+  color:var(--dsm-accent-fuerte); border:2px solid var(--dsm-accent);
+  padding:0 6px; white-space:nowrap;
+  background:repeating-linear-gradient(135deg,
+    var(--dsm-accent-100) 0 6px, var(--dsm-accent-200) 6px 12px);
+}
+.dato-sinclas {
+  font-family:'Archivo',system-ui,sans-serif; font-weight:800;
+  color:var(--dsm-neutral-700); border:2px dashed var(--dsm-neutral-600);
+  padding:0 6px; white-space:nowrap;
+}
+
+/* Estado de un archivo cargado. "Ya estaba" es neutro a proposito: un duplicado
+   no es un error del supervisor y pintarlo de rojo lo manda a buscar un problema
+   que no existe. */
+.est-ok, .est-dup, .est-err {
+  font-family:'Archivo',system-ui,sans-serif; font-weight:800;
+  font-size:11px; letter-spacing:.06em; padding:3px 9px; white-space:nowrap;
+}
+.est-ok  { border:2px solid var(--dsm-text); }
+.est-dup { border:1px solid var(--dsm-divider); background:var(--dsm-surface);
+           color:var(--dsm-neutral-700); }
+.est-err { background:var(--dsm-accent); color:var(--dsm-bg); }
+
+.dsm-kicker {
+  font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--dsm-neutral-600); font-family:'Archivo',system-ui,sans-serif;
+  font-weight:800;
+}
+
+/* Pestanas: subrayado de 3px en la activa, sin pastilla.
+   Se apunta a [role="tab"] y NO a [data-baseweb="tab"]: Streamlit 1.60 dejo de
+   emitir ese atributo (verificado en el DOM, 0 elementos) y con el la regla no
+   pintaba nada. La nota "Cómo se arma esto en Streamlit" de la maqueta trae el
+   selector viejo. */
+.stTabs [role="tablist"] { gap:0; border-bottom:2px solid var(--dsm-divider); }
+.stTabs [role="tab"] {
+  font-family:'Archivo',system-ui,sans-serif; font-weight:800; font-size:14px;
+  padding:14px 18px; border-bottom:3px solid transparent;
+}
+.stTabs [role="tab"][aria-selected="true"] { border-bottom-color:var(--dsm-accent); }
+
+/* Zona de arrastre: 2px dashed, como la maqueta. */
+[data-testid="stFileUploaderDropzone"] {
+  border:2px dashed var(--dsm-divider); border-radius:0; background:var(--dsm-surface);
+}
+
+/* Avance de la cola de revision. */
+[data-testid="stProgress"] > div > div > div,
+.stProgress > div > div > div { border-radius:0; }
+
+/* Las opciones de causa se leen en columna: el texto va a la izquierda. */
+.stButton > button { text-align:left; justify-content:flex-start; }
+
+/* La cita textual de lo que escribio el supervisor. */
+.dsm-cita {
+  border-left:3px solid var(--dsm-neutral-600); padding:2px 0 2px 12px;
+  font-size:17px; line-height:1.45;
+}
+</style>
+"""
+
+
+def aplicar_estilo() -> None:
+    """Inyecta la capa visual, resuelta contra el tema activo.
+
+    Se lee `st.context.theme` en vez de usar prefers-color-scheme: el usuario
+    puede forzar claro u oscuro en Streamlit sin tocar el tema del sistema
+    operativo, y ahi las dos cosas dejan de coincidir.
+    """
+    try:
+        tema = st.context.theme.type or "light"
+    except Exception:  # noqa: BLE001 - version sin st.context: el claro sirve
+        tema = "light"
+    st.html(CSS % {"vars": VARS_TEMA.get(tema, VARS_TEMA["light"])})
+
+
+def dato(valor, estado: str = "ok", sufijo: str = "") -> str:
+    """HTML de un dato con su procedencia. Devuelve, no pinta.
+
+    `estado` es "ok" | "dudoso" | "sinclas". El prefijo ≈ del dudoso se pone
+    aqui y no en el texto que llega: asi ningun sitio de la app puede mostrar un
+    numero sin respaldo sin que se le note.
+    """
+    clases = {"ok": "dato-ok", "dudoso": "dato-dudoso", "sinclas": "dato-sinclas"}
+    clase = clases.get(estado, "dato-ok")
+    texto = f"≈{valor}" if estado == "dudoso" else f"{valor}"
+    if sufijo:
+        texto = f"{texto} {sufijo}"
+    return f'<span class="{clase}">{texto}</span>'
+
+
+def leyenda_datos() -> None:
+    """La leyenda de los tres estados. Va fija en la barra lateral.
+
+    No es adorno: sin ella, el rayado rojo se lee como "error" y el supervisor
+    corrige datos que estaban bien.
+    """
+    st.markdown('<div class="dsm-kicker">Cómo leer un dato</div>',
+                unsafe_allow_html=True)
+    # <b> y no **: el bloque se pinta con unsafe_allow_html y ahi el markdown no
+    # se procesa — los asteriscos salen literales en pantalla.
+    filas = [
+        (dato(136), "<b>VERIFICADO</b><br>está escrito en el documento"),
+        (dato(30, "dudoso"), "<b>DUDOSO</b><br>lo produjo el modelo, no el documento"),
+        (dato("?", "sinclas"), "<b>SIN CLASIFICAR</b><br>no cuadró con el catálogo"),
+    ]
+    st.markdown(
+        "".join(
+            f'<div style="display:flex;gap:10px;align-items:flex-start;margin-top:10px">'
+            f'<span style="flex:none">{marca}</span>'
+            f'<span style="font-size:11px;line-height:1.3">{texto}</span></div>'
+            for marca, texto in filas
+        ),
+        unsafe_allow_html=True,
+    )
+
+
 # --- Utilidades de carga y forma de datos ------------------------------------
 
 def _a_dict(fila) -> dict:
@@ -465,7 +628,7 @@ def inicializar_estado() -> None:
 
 def _boton_inicializar(db, clave: str, forzar: bool = False) -> None:
     etiqueta = "Reconstruir DB (borra los datos)" if forzar else "Inicializar DB"
-    if not st.button(etiqueta, key=clave, type="primary", use_container_width=True):
+    if not st.button(etiqueta, key=clave, type="primary", width="stretch"):
         return
     try:
         with st.spinner("Creando esquema y cargando la taxonomía…"):
@@ -479,6 +642,17 @@ def _boton_inicializar(db, clave: str, forzar: bool = False) -> None:
 
 def barra_lateral(db, estado: dict, errores: dict, pendientes: list) -> None:
     with st.sidebar:
+        st.markdown(
+            '<div style="font-family:Archivo,system-ui,sans-serif;font-weight:800;'
+            'font-size:18px;line-height:1.05">COPILOTO DE<br>PRODUCCIÓN</div>'
+            '<div class="dsm-kicker" style="margin-top:6px">'
+            'Haceb · modelo local · sin internet</div>',
+            unsafe_allow_html=True,
+        )
+        st.divider()
+        leyenda_datos()
+        st.divider()
+
         st.markdown("### Estado del sistema")
 
         # --- Modelo ---
@@ -501,7 +675,7 @@ def barra_lateral(db, estado: dict, errores: dict, pendientes: list) -> None:
             st.success("Responde", icon="🟢")
         if ping.get("num_ctx"):
             st.caption(f"Ventana de contexto: {ping['num_ctx']} tokens")
-        if st.button("Volver a probar", use_container_width=True):
+        if st.button("Volver a probar", width="stretch"):
             st.session_state.ping = _ping_modelo()
             st.rerun()
 
@@ -605,15 +779,59 @@ def _procesar_rutas(ingest, rutas: list[Path]) -> list[dict]:
     return resultados
 
 
+CLASE_ESTADO = {"ok": "est-ok", "duplicado": "est-dup", "error": "est-err"}
+ROTULO_ESTADO = {"ok": "GUARDADO", "duplicado": "YA ESTABA", "error": "NO SE PUDO"}
+
+
 def _mostrar_resultados(resultados: list[dict]) -> None:
+    """Una fila por archivo, con el estado como rotulo y no como icono.
+
+    Se pinta a mano y no con st.dataframe porque la columna de dudosos tiene que
+    salir con la marca rayada del design system: es la que manda al supervisor a
+    la pestana Revisar, y dentro de una tabla se pierde entre las demas.
+    """
     if not resultados:
         return
     st.markdown("#### Resultado por archivo")
-    st.dataframe(
-        [_fila_resultado(r) for r in resultados],
-        use_container_width=True,
-        hide_index=True,
-    )
+    for r in resultados:
+        estado = str(r.get("estado", "error"))
+        dudosos = int(r.get("campos_dudosos", 0) or 0)
+        c1, c2, c3, c4, c5 = st.columns([4, 1.5, 1.3, 1, 2],
+                                        vertical_alignment="center")
+        c1.markdown(
+            f'<div style="font-family:Archivo,system-ui,sans-serif;font-weight:800;'
+            f'font-size:15px;word-break:break-all">{r.get("archivo", "?")}</div>'
+            f'<div style="font-size:12px;color:var(--dsm-neutral-700);margin-top:2px">'
+            f'{r.get("motivo") or ""}</div>',
+            unsafe_allow_html=True,
+        )
+        c2.markdown(
+            f'<span style="font-size:12px;color:var(--dsm-neutral-700)">'
+            f'{r.get("formato", "?")}</span>',
+            unsafe_allow_html=True,
+        )
+        c3.markdown(
+            f'<span class="{CLASE_ESTADO.get(estado, "est-err")}">'
+            f'{ROTULO_ESTADO.get(estado, estado.upper())}</span>',
+            unsafe_allow_html=True,
+        )
+        c4.markdown(
+            f'<span style="font-family:Archivo,system-ui,sans-serif;font-weight:800;'
+            f'font-size:14px">{r.get("turnos_guardados", 0)} turnos</span>',
+            unsafe_allow_html=True,
+        )
+        c5.markdown(
+            "<span style='font-size:13px;color:var(--dsm-neutral-700)'>"
+            "ningún campo dudoso</span>"
+            if dudosos == 0 else
+            f"{dato(dudosos, 'dudoso')}"
+            f"<span style='font-size:13px;margin-left:8px'>campos por revisar</span>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            '<hr style="margin:6px 0;border:0;border-bottom:1px solid var(--dsm-divider)">',
+            unsafe_allow_html=True,
+        )
 
     ok = sum(1 for r in resultados if r.get("estado") == "ok")
     dup = sum(1 for r in resultados if r.get("estado") == "duplicado")
@@ -658,14 +876,14 @@ def pestana_cargar(ingest) -> None:
             f"Procesar {len(archivos)} archivo(s)" if archivos else "Procesar",
             type="primary",
             disabled=not archivos,
-            use_container_width=True,
+            width="stretch",
         )
     with col_b:
         ejemplos = sorted(p for p in EJEMPLOS.glob("*") if p.is_file()) if EJEMPLOS.exists() else []
         cargar_ejemplos = st.button(
             f"Cargar los {len(ejemplos)} ejemplos del repo",
             disabled=not ejemplos,
-            use_container_width=True,
+            width="stretch",
             help="Reportes de turno de muestra, para ver el flujo completo sin datos reales.",
         )
 
@@ -1010,7 +1228,7 @@ def pestana_preguntar(agente) -> None:
     columnas = st.columns(len(PREGUNTAS_EJEMPLO))
     sugerida = None
     for col, ejemplo in zip(columnas, PREGUNTAS_EJEMPLO):
-        if col.button(ejemplo, use_container_width=True):
+        if col.button(ejemplo, width="stretch"):
             sugerida = ejemplo
 
     if st.session_state.mensajes_prod and st.button("Limpiar conversación"):
@@ -1144,8 +1362,9 @@ def panel_arranque_frio(db, estado: dict) -> None:
 
 def main() -> None:
     inicializar_estado()
+    aplicar_estilo()
 
-    st.title("🏭 Copiloto de Producción HACEB")
+    st.title("Copiloto de Producción HACEB")
     st.caption(
         "Consolida los reportes de turno, muestra lo que se repite y responde "
         "preguntas — todo local, sin que un solo dato de planta salga de la red."
@@ -1177,9 +1396,11 @@ def main() -> None:
 
     # El badge de pendientes va en el nombre de la pestaña: es el unico numero
     # que la app quiere que el supervisor vea sin buscarlo.
-    etiqueta_revisar = "🔎 Revisar" + (f" ({len(pendientes)})" if pendientes else "")
+    # Sin emojis: el design system usa tipografia y el acento rojo para jerarquia,
+    # y ese rojo esta reservado para los datos sin respaldo.
+    etiqueta_revisar = "Revisar" + (f" ({len(pendientes)})" if pendientes else "")
     cargar, revisar, preguntar, resumen = st.tabs(
-        ["📥 Cargar", etiqueta_revisar, "💬 Preguntar", "📄 Resumen ejecutivo"]
+        ["Cargar", etiqueta_revisar, "Preguntar", "Resumen ejecutivo"]
     )
 
     with cargar:

@@ -1,0 +1,47 @@
+# Tema "Modernist" del diseno de Claude Design (bundle _ds/modernist-07ecfa1c).
+# Los tokens son los de _ds/.../styles.css, no una aproximacion: si alguien
+# retoca el design system, esto se actualiza contra ese archivo.
+#
+# Lo que define el look: esquinas a 0, bordes de 2px, Archivo 800 en titulos y
+# un solo acento rojo que SOLO se usa para lo que el modelo no pudo respaldar.
+# Ese acento no es decoracion: es el codigo de color del producto.
+
+[theme]
+base = "light"
+font = "Archivo, system-ui, sans-serif"
+headingFont = "Archivo, system-ui, sans-serif"
+codeFont = "ui-monospace, SFMono-Regular, Menlo, monospace"
+
+# El sistema es de esquina viva. Cero excepciones.
+baseRadius = "0px"
+buttonRadius = "0px"
+
+baseFontSize = 15
+headingFontWeights = [800, 800, 800, 800, 800, 800]
+
+# Las barras del Pareto: el acento primero (la causa que mas pesa) y despues
+# neutros. Un Pareto de seis colores distintos no dice cual importa.
+chartCategoricalColors = ["#ec3013", "#444141", "#605d5d", "#7d7979", "#9b9797", "#bab6b6"]
+
+[theme.light]
+backgroundColor = "#f3f2f2"
+secondaryBackgroundColor = "#eae9e9"
+textColor = "#201e1d"
+primaryColor = "#ec3013"
+borderColor = "#9e9d9d"
+linkColor = "#ec3013"
+
+[theme.dark]
+backgroundColor = "#171615"
+secondaryBackgroundColor = "#242221"
+textColor = "#f4f2f1"
+primaryColor = "#ff563c"
+borderColor = "#6b6a69"
+linkColor = "#ff9783"
+
+[server]
+# Datos de planta: la consola no se expone en la red sin decidirlo a proposito.
+address = "localhost"
+
+[browser]
+gatherUsageStats = false
