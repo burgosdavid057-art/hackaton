@@ -1,0 +1,4 @@
+# Dependencias solo para desarrollo y CI (no hacen falta para correr el agente).
+# La suite de tests cubre la logica pura (fontfix, catalogo, herramientas) y no
+# necesita las dependencias pesadas de requirements.txt.
+pytest>=8.0

@@ -1,5 +1,7 @@
 # Agente de ciclo de vida Haceb
 
+[![CI](https://github.com/burgosdavid057-art/hackaton/actions/workflows/ci.yml/badge.svg)](https://github.com/burgosdavid057-art/hackaton/actions/workflows/ci.yml)
+
 Un agente que acompaña un electrodoméstico durante toda su vida, no solo hasta el carrito de compras.
 
 **Antes de comprar:** ¿cabe en mi cocina y pasa por la puerta? ¿cuánto me va a costar de luz en 10 años?
@@ -118,6 +120,20 @@ El canal WhatsApp se prueba en local con `curl` (ver cabecera de [channels/whats
 ### Modelo
 
 Se usa `gemini-flash-latest`. **Los IDs `gemini-2.0-flash` y `gemini-2.5-flash` devuelven 404/429** en cuentas de capa gratuita aunque aparezcan en `models.list()`, cosa que cuesta un buen rato descubrir.
+
+## Tests
+
+La lógica pura (reparación de manuales, catálogo y las herramientas) tiene una
+suite de tests que corre en segundos, sin red ni las dependencias pesadas:
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+Usa un catálogo sintético (ver [conftest.py](conftest.py)), así que es
+determinista. En CI corre contra Python 3.11, 3.12 y 3.13. Ver
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Decisiones
 
